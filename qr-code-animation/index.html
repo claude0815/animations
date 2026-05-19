@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR-Code · Schritt für Schritt</title>
+    <style>
+        :root {
+            --bg1: #667eea;
+            --bg2: #764ba2;
+            --card: #ffffff;
+            --text: #222;
+            --muted: #666;
+            --accent: #4f46e5;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --border: #ddd;
+
+            /* Segment-Farben */
+            --col-mode:    #2563eb;
+            --col-count:   #16a34a;
+            --col-data:    #f59e0b;
+            --col-term:    #8b5cf6;
+            --col-padbits: #94a3b8;
+            --col-padbyte: #64748b;
+            --col-ec:      #db2777;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .wrap { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-top: 0;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 8px;
+        }
+
+        /* ---------- Eingabe ---------- */
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            font-size: 20px;
+            font-family: "Courier New", monospace;
+            letter-spacing: 2px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+        button.action {
+            padding: 12px 22px;
+            font-size: 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.action:hover { background: #3730a3; }
+        button.action:disabled { background: #aaa; cursor: not-allowed; }
+
+        button.secondary {
+            padding: 12px 18px;
+            font-size: 14px;
+            background: white;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .speed {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .hint {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+        /* ---------- Binäre Codierung ---------- */
+        .binary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 8px 4px;
+            font-family: "Courier New", monospace;
+        }
+
+        .segment {
+            display: inline-flex;
+            flex-direction: column;
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 6px 8px 8px 8px;
+            background: #f9fafb;
+            min-height: 64px;
+        }
+
+        .segment .label {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .segment .bits {
+            display: flex;
+            gap: 2px;
+        }
+
+        .bit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 22px;
+            border-radius: 3px;
+            background: #e5e7eb;
+            color: #111;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .bit.active {
+            transform: scale(1.4);
+            box-shadow: 0 0 0 2px var(--accent), 0 0 12px rgba(79,70,229,0.6);
+            z-index: 5;
+        }
+
+        .bit.done {
+            background: var(--seg-color, #ddd);
+            color: white;
+        }
+
+        /* Segment-Farbgebung */
+        .seg-mode    { border-color: var(--col-mode);    --seg-color: var(--col-mode); }
+        .seg-mode    .label { color: var(--col-mode); }
+        .seg-count   { border-color: var(--col-count);   --seg-color: var(--col-count); }
+        .seg-count   .label { color: var(--col-count); }
+        .seg-data    { border-color: var(--col-data);    --seg-color: var(--col-data); }
+        .seg-data    .label { color: #b45309; }
+        .seg-term    { border-color: var(--col-term);    --seg-color: var(--col-term); }
+        .seg-term    .label { color: var(--col-term); }
+        .seg-padbits { border-color: var(--col-padbits); --seg-color: var(--col-padbits); }
+        .seg-padbits .label { color: var(--col-padbits); }
+        .seg-padbyte { border-color: var(--col-padbyte); --seg-color: var(--col-padbyte); }
+        .seg-padbyte .label { color: var(--col-padbyte); }
+        .seg-ec      { border-color: var(--col-ec);      --seg-color: var(--col-ec); }
+        .seg-ec      .label { color: var(--col-ec); }
+
+        /* Legende */
+        .legend {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 10px;
+        }
+        .legend span.chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        /* ---------- QR-Matrix ---------- */
+        .qr-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qr {
+            display: grid;
+            grid-template-columns: repeat(21, var(--cell, 22px));
+            grid-template-rows: repeat(21, var(--cell, 22px));
+            gap: 0;
+            background: #cbd5e1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .cell {
+            width: var(--cell, 22px);
+            height: var(--cell, 22px);
+            background: #e5e7eb;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+        }
+
+        .cell.white  { background: #ffffff; }
+        .cell.black  { background: #111111; }
+        .cell.fmt    { background: #d4d4d8; }   /* Format-Info reserviert */
+        .cell.timing-w { background: #ffffff; }
+        .cell.timing-b { background: #111111; }
+
+        .cell.active {
+            transform: scale(1.4);
+            box-shadow: 0 0 0 2px var(--accent), 0 0 12px rgba(79,70,229,0.7);
+            z-index: 5;
+            position: relative;
+        }
+
+        .qr-legend {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        .qr-legend .sw {
+            display: inline-block;
+            width: 14px; height: 14px;
+            vertical-align: middle;
+            margin-right: 4px;
+            border: 1px solid #bbb;
+            border-radius: 2px;
+        }
+
+        /* Status / Counter */
+        .status {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #eef2ff;
+            border-radius: 8px;
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        /* ---------- Erklärung ---------- */
+        details {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: #f3f4f6;
+            border-radius: 8px;
+        }
+        details summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        details p { margin: 8px 0; line-height: 1.5; }
+
+        /* Layout: Binär links, QR rechts */
+        .visual-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .visual-row { grid-template-columns: 1fr; }
+            :root { --cell: 16px; }
+            .bit { width: 14px; height: 20px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <h1>QR-Code · Schritt für Schritt</h1>
+
+    <!-- ===== 1. Eingabe ===== -->
+    <div class="card">
+        <h2>1. Wort eingeben</h2>
+        <div class="input-row">
+            <input type="text" id="input" autocomplete="off"
+                   placeholder="z. B. Hallo" maxlength="17">
+            <button class="action" id="start">▶ Codieren &amp; Animieren</button>
+            <button class="secondary" id="example">Beispiel</button>
+        </div>
+        <div class="speed">
+            <label for="speed">Geschwindigkeit pro Bit:</label>
+            <input type="range" id="speed" min="20" max="500" step="10" value="120">
+            <span id="speedLabel">120 ms</span>
+        </div>
+        <div class="hint">
+            Maximal <b>17 Zeichen</b> (ASCII) — wir verwenden QR-Code Version&nbsp;1
+            (21 × 21 Module) im <b>Byte-Modus</b> mit Fehlerkorrekturstufe&nbsp;L.
+        </div>
+    </div>
+
+    <!-- ===== 2. Binärcode + QR ===== -->
+    <div class="card">
+        <h2>2. Binäre Codierung &amp; Platzierung im QR-Code</h2>
+
+        <div class="visual-row">
+            <!-- Binär -->
+            <div>
+                <div class="binary" id="binary">
+                    <em style="color: var(--muted)">Hier erscheinen gleich die Bits …</em>
+                </div>
+
+                <div class="legend" id="legend"></div>
+
+                <div class="status" id="status">Wartet auf Eingabe …</div>
+            </div>
+
+            <!-- QR -->
+            <div class="qr-wrap">
+                <div class="qr" id="qr"></div>
+                <div class="qr-legend">
+                    <span><span class="sw" style="background:#111"></span>1 = schwarz</span>
+                    <span><span class="sw" style="background:#fff"></span>0 = weiß</span>
+                    <span><span class="sw" style="background:#d4d4d8"></span>Format-Info (reserviert)</span>
+                    <span><span class="sw" style="background:#e5e7eb"></span>noch leer</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 3. Erklärung ===== -->
+    <div class="card">
+        <h2>3. Wie ist ein QR-Code aufgebaut?</h2>
+        <p>Ein QR-Code besteht aus festen <b>Strukturelementen</b> und einem <b>Datenbereich</b>.
+            Strukturelemente sind: die drei großen <b>Suchmuster</b> in den Ecken (damit der
+            Scanner den Code findet und ausrichtet), die <b>Trennstreifen</b> drumherum, die
+            <b>Taktlinien</b> (abwechselnd schwarz/weiß) zwischen den Suchmustern und das
+            <b>Dunkelmodul</b> unten links neben dem Format-Info-Bereich.</p>
+
+        <details open>
+            <summary>So entstehen die Bits</summary>
+            <p><b>Modus-ID (4 Bit):</b> Hier <code>0100</code> für „Byte-Modus" — also
+               beliebige 8-Bit-Bytes.</p>
+            <p><b>Anzahl (8 Bit):</b> Wie viele Zeichen folgen? Bei Version 1
+               passt das in 8 Bit (max. 255).</p>
+            <p><b>Daten:</b> Jedes Zeichen als 8-Bit-Byte (ASCII).</p>
+            <p><b>Endmarkierung:</b> Bis zu vier <code>0</code>-Bits zeigen das Ende der
+               Nutzdaten.</p>
+            <p><b>Padding:</b> Erst werden die restlichen Bits eines Bytes mit <code>0</code>
+               aufgefüllt. Sind dann noch Bytes frei, kommen abwechselnd die festen
+               Füllbytes <code>11101100</code> und <code>00010001</code>.</p>
+            <p><b>Fehlerkorrektur:</b> Aus den 19 Datenbytes werden 7 zusätzliche
+               Reed-Solomon-Bytes berechnet. Damit kann der Scanner kleine Lese-Fehler
+               selbst reparieren.</p>
+        </details>
+
+        <details>
+            <summary>So werden die Bits platziert</summary>
+            <p>Die Bits werden in einem <b>Zickzack-Muster</b> von <b>unten rechts</b> nach
+               oben links eingetragen. Jeweils zwei Spalten werden parallel befüllt: erst die
+               rechte, dann die linke Spalte einer Zeile. Am Ende einer Spaltengruppe dreht
+               sich die Richtung um, und die senkrechte Taktlinie (Spalte 6) wird
+               übersprungen.</p>
+            <p>Strukturelemente und reservierte Bereiche (z. B. Format-Info) werden dabei
+               übersprungen — die Bits „fließen" um sie herum.</p>
+        </details>
+
+        <details>
+            <summary>Was wäre noch nötig für einen scannbaren QR?</summary>
+            <p>Echte QR-Codes wenden vor dem Drucken zusätzlich eine <b>Maske</b> an: ein
+               festes Schwarz-Weiß-Muster, das per XOR über die Datenbits gelegt wird, damit
+               keine großen einfarbigen Flächen entstehen. Außerdem werden die <b>Format-
+               Informationen</b> (Fehlerkorrektur-Stufe und Masken-Nummer) an den grau
+               markierten Stellen eingetragen. In dieser Animation zeigen wir die <em>rohen</em>
+               Bits direkt — deshalb gilt hier sauber: <b>0 = weiß, 1 = schwarz</b>.</p>
+        </details>
+    </div>
+
+</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// QR-Code Version 1, Byte-Modus, EC-Level L
+//   - 21 x 21 Module
+//   - 19 Datenbytes + 7 EC-Bytes = 26 Bytes = 208 Bits
+//   - Maximal 17 ASCII-Zeichen (4 + 8 + 17*8 + 4 = 152 Bits)
+// ============================================================
+
+const SIZE = 21;
+const DATA_CODEWORDS = 19;
+const EC_CODEWORDS   = 7;
+const MAX_BITS       = DATA_CODEWORDS * 8;   // 152
+
+// ----- GF(256) Tabellen -----
+const EXP = new Array(512);
+const LOG = new Array(256);
+(function initGF() {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+        EXP[i] = x;
+        LOG[x] = i;
+        x <<= 1;
+        if (x & 0x100) x ^= 0x11D;
+    }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+})();
+
+function gfMul(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return EXP[LOG[a] + LOG[b]];
+}
+
+// Reed-Solomon Generator-Polynom vom Grad 'degree'
+function rsGenerator(degree) {
+    let poly = [1];
+    for (let i = 0; i < degree; i++) {
+        const next = new Array(poly.length + 1).fill(0);
+        for (let j = 0; j < poly.length; j++) {
+            next[j]     ^= poly[j];
+            next[j + 1] ^= gfMul(poly[j], EXP[i]);
+        }
+        poly = next;
+    }
+    return poly;
+}
+
+function rsEncode(data, ecLen) {
+    const gen = rsGenerator(ecLen);
+    const res = data.concat(new Array(ecLen).fill(0));
+    for (let i = 0; i < data.length; i++) {
+        const coef = res[i];
+        if (coef !== 0) {
+            for (let j = 0; j < gen.length; j++) {
+                res[i + j] ^= gfMul(gen[j], coef);
+            }
+        }
+    }
+    return res.slice(data.length);
+}
+
+function bitsOf(value, n) {
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) out.push((value >> i) & 1);
+    return out;
+}
+
+// ----- Segmentierte Codierung -----
+function encodeSegmented(text) {
+    // Erzeuge Bytes (ASCII / Latin-1) — Eingabe ist auf ASCII begrenzt.
+    const bytes = [];
+    for (let i = 0; i < text.length; i++) {
+        bytes.push(text.charCodeAt(i) & 0xFF);
+    }
+
+    const segs = [];
+
+    // Modus-ID: 0100 (Byte)
+    segs.push({ kind: 'mode',  label: 'Modus-ID (Byte)',  bits: bitsOf(0b0100, 4) });
+
+    // Anzahl
+    segs.push({ kind: 'count', label: 'Anzahl: ' + bytes.length, bits: bitsOf(bytes.length, 8) });
+
+    // Daten — pro Zeichen ein eigenes Segment
+    bytes.forEach((b, i) => {
+        const ch = String.fromCharCode(b);
+        const safe = (ch >= ' ' && ch <= '~') ? "'" + ch + "'" : '#' + b;
+        segs.push({ kind: 'data', label: 'Zeichen ' + safe, bits: bitsOf(b, 8) });
+    });
+
+    let used = 4 + 8 + bytes.length * 8;
+
+    // Endmarkierung: bis zu 4 Nullen (oder weniger, falls Platz knapp)
+    const termLen = Math.min(4, MAX_BITS - used);
+    segs.push({ kind: 'term', label: 'Endmarkierung', bits: new Array(termLen).fill(0) });
+    used += termLen;
+
+    // Padding-Bits bis zur nächsten Byte-Grenze
+    const padBitsCount = (8 - (used % 8)) % 8;
+    if (padBitsCount > 0) {
+        segs.push({ kind: 'padbits', label: 'Padding-Bits (Byte auffüllen)',
+                    bits: new Array(padBitsCount).fill(0) });
+        used += padBitsCount;
+    }
+
+    // Padding-Bytes 0xEC / 0x11 abwechselnd
+    let padByte = 0xEC;
+    let padNum = 1;
+    while (used < MAX_BITS) {
+        const hex = padByte === 0xEC ? '0xEC' : '0x11';
+        segs.push({ kind: 'padbyte', label: 'Füllbyte ' + (padNum++) + ' (' + hex + ')',
+                    bits: bitsOf(padByte, 8) });
+        padByte = (padByte === 0xEC) ? 0x11 : 0xEC;
+        used += 8;
+    }
+
+    // Aus den Daten-Bits die 19 Bytes berechnen
+    const flat = segs.flatMap(s => s.bits);
+    const dataBytes = [];
+    for (let i = 0; i < flat.length; i += 8) {
+        let v = 0;
+        for (let j = 0; j < 8; j++) v = (v << 1) | flat[i + j];
+        dataBytes.push(v);
+    }
+
+    // Reed-Solomon EC-Bytes
+    const ecBytes = rsEncode(dataBytes, EC_CODEWORDS);
+    ecBytes.forEach((b, i) => {
+        segs.push({ kind: 'ec',
+                    label: 'Fehlerkorrektur-Byte ' + (i + 1),
+                    bits: bitsOf(b, 8) });
+    });
+
+    return segs;
+}
+
+// ----- Matrix-Aufbau -----
+function newMatrix() {
+    const m = [], reserved = [];
+    for (let r = 0; r < SIZE; r++) {
+        m.push(new Array(SIZE).fill('empty'));
+        reserved.push(new Array(SIZE).fill(false));
+    }
+
+    // Suchmuster + Trennstreifen
+    for (const [br, bc] of [[0,0], [0,14], [14,0]]) {
+        for (let dr = -1; dr <= 7; dr++) {
+            for (let dc = -1; dc <= 7; dc++) {
+                const r = br + dr, c = bc + dc;
+                if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) continue;
+
+                let v = 'white';
+                if (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) {
+                    if (dr === 0 || dr === 6 || dc === 0 || dc === 6) v = 'black';
+                    else if (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4) v = 'black';
+                    else v = 'white';
+                }
+                m[r][c] = v;
+                reserved[r][c] = true;
+            }
+        }
+    }
+
+    // Taktlinien (cols/rows 8..12 auf row 6 / col 6)
+    for (let i = 8; i <= 12; i++) {
+        m[6][i] = (i % 2 === 0) ? 'black' : 'white';
+        m[i][6] = (i % 2 === 0) ? 'black' : 'white';
+        reserved[6][i] = true;
+        reserved[i][6] = true;
+    }
+
+    // Dunkelmodul
+    m[13][8] = 'black';
+    reserved[13][8] = true;
+
+    // Format-Info-Bereiche reservieren (bleiben grau)
+    for (let i = 0; i <= 8; i++) {
+        if (!reserved[8][i]) { m[8][i] = 'fmt'; reserved[8][i] = true; }
+        if (!reserved[i][8]) { m[i][8] = 'fmt'; reserved[i][8] = true; }
+    }
+    for (let i = 13; i < SIZE; i++) {
+        if (!reserved[8][i]) { m[8][i] = 'fmt'; reserved[8][i] = true; }
+        if (!reserved[i][8]) { m[i][8] = 'fmt'; reserved[i][8] = true; }
+    }
+
+    return { m, reserved };
+}
+
+// ----- Zickzack-Platzierungsreihenfolge -----
+function placementOrder(reserved) {
+    const order = [];
+    let upward = true;
+    let col = SIZE - 1;
+
+    while (col > 0) {
+        if (col === 6) { col--; continue; }   // senkrechte Taktlinie überspringen
+        const startRow = upward ? SIZE - 1 : 0;
+        const endRow   = upward ? -1 : SIZE;
+        const step     = upward ? -1 : 1;
+        for (let r = startRow; r !== endRow; r += step) {
+            for (const c of [col, col - 1]) {
+                if (c < 0) continue;
+                if (!reserved[r][c]) order.push([r, c]);
+            }
+        }
+        col -= 2;
+        upward = !upward;
+    }
+    return order;
+}
+
+// ============================================================
+// UI
+// ============================================================
+const $  = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+const state = {
+    speedMs: 120,
+    running: false
+};
+
+// Legende einmalig aufbauen
+(function buildLegend() {
+    const items = [
+        ['mode',    'Modus-ID',          'var(--col-mode)'],
+        ['count',   'Anzahl',            'var(--col-count)'],
+        ['data',    'Daten',             'var(--col-data)'],
+        ['term',    'Endmarkierung',     'var(--col-term)'],
+        ['padbits', 'Padding-Bits',      'var(--col-padbits)'],
+        ['padbyte', 'Füllbyte',          'var(--col-padbyte)'],
+        ['ec',      'Fehlerkorrektur',   'var(--col-ec)']
+    ];
+    const el = $("legend");
+    items.forEach(([_k, name, color]) => {
+        const span = document.createElement("span");
+        span.innerHTML = '<span class="chip" style="background:' + color + '"></span>' + name;
+        el.appendChild(span);
+    });
+})();
+
+// QR-Grid einmal aufbauen (leere Zellen)
+function renderQR(state) {
+    const grid = $("qr");
+    grid.innerHTML = "";
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.id = 'c-' + r + '-' + c;
+            cell.className = 'cell';
+            const v = state.m[r][c];
+            if (v === 'white')      cell.classList.add('white');
+            else if (v === 'black') cell.classList.add('black');
+            else if (v === 'fmt')   cell.classList.add('fmt');
+            grid.appendChild(cell);
+        }
+    }
+}
+
+// Binär-Anzeige aufbauen, jedes Bit bekommt eindeutige ID
+function renderBinary(segs) {
+    const el = $("binary");
+    el.innerHTML = "";
+    let bitIdx = 0;
+    segs.forEach((seg, segIdx) => {
+        const div = document.createElement("div");
+        div.className = 'segment seg-' + seg.kind;
+
+        const lbl = document.createElement("div");
+        lbl.className = 'label';
+        lbl.textContent = seg.label;
+        div.appendChild(lbl);
+
+        const bitsEl = document.createElement("div");
+        bitsEl.className = 'bits';
+        seg.bits.forEach((b) => {
+            const bEl = document.createElement("span");
+            bEl.className = 'bit';
+            bEl.id = 'b-' + bitIdx;
+            bEl.textContent = b;
+            bitsEl.appendChild(bEl);
+            bitIdx++;
+        });
+        div.appendChild(bitsEl);
+        el.appendChild(div);
+    });
+}
+
+function resetView() {
+    $("binary").innerHTML  = '<em style="color: var(--muted)">Hier erscheinen gleich die Bits …</em>';
+    $("status").textContent = 'Wartet auf Eingabe …';
+    const init = newMatrix();
+    renderQR(init);
+}
+resetView();
+
+// ----- Geschwindigkeit -----
+$("speed").addEventListener("input", (e) => {
+    state.speedMs = parseInt(e.target.value, 10);
+    $("speedLabel").textContent = state.speedMs + " ms";
+});
+
+// ----- Eingabe filtern (nur druckbare ASCII) -----
+$("input").addEventListener("input", (e) => {
+    const filtered = e.target.value.replace(/[^\x20-\x7E]/g, "");
+    if (filtered !== e.target.value) e.target.value = filtered;
+});
+
+// ----- Beispiel -----
+$("example").addEventListener("click", () => {
+    if (state.running) return;
+    $("input").value = "Hallo";
+});
+
+// ----- Start -----
+$("start").addEventListener("click", async () => {
+    if (state.running) return;
+    const text = $("input").value.trim();
+    if (text.length === 0) {
+        $("status").textContent = '⚠ Bitte ein Wort eingeben.';
+        return;
+    }
+    if (text.length > 17) {
+        $("status").textContent = '⚠ Maximal 17 Zeichen (Version 1).';
+        return;
+    }
+
+    state.running = true;
+    $("start").disabled = true;
+
+    try {
+        await runAnimation(text);
+    } finally {
+        state.running = false;
+        $("start").disabled = false;
+    }
+});
+
+// ============================================================
+// Haupt-Animation
+// ============================================================
+async function runAnimation(text) {
+    // 1) Codieren
+    const segs = encodeSegmented(text);
+    const bits = segs.flatMap(s => s.bits);   // sollte 208 Bits sein
+
+    // 2) Anzeige aufbauen
+    renderBinary(segs);
+
+    const matrix = newMatrix();
+    renderQR(matrix);
+
+    // 3) Platzierungsreihenfolge berechnen
+    const order = placementOrder(matrix.reserved);
+
+    $("status").textContent =
+        bits.length + ' Bits werden in ' + order.length + ' freie Module gesetzt …';
+
+    // 4) Bit für Bit animieren
+    for (let i = 0; i < bits.length && i < order.length; i++) {
+        const [r, c] = order[i];
+        const bit = bits[i];
+
+        const bitEl  = $('b-' + i);
+        const cellEl = $('c-' + r + '-' + c);
+
+        // Hervorheben
+        bitEl.classList.add('active');
+        cellEl.classList.add('active');
+
+        await sleep(state.speedMs);
+
+        // Zelle einfärben
+        cellEl.classList.remove('active');
+        cellEl.classList.add(bit === 1 ? 'black' : 'white');
+
+        // Bit als platziert markieren
+        bitEl.classList.remove('active');
+        bitEl.classList.add('done');
+
+        // Status alle paar Bits aktualisieren
+        if (i % 8 === 7 || i === bits.length - 1) {
+            $("status").textContent =
+                'Bit ' + (i + 1) + ' / ' + bits.length +
+                '  ·  Position (Zeile ' + r + ', Spalte ' + c + ')';
+        }
+    }
+
+    $("status").innerHTML =
+        '✅ Fertig! ' + bits.length + ' Bits platziert. ' +
+        '<small style="color:var(--muted)">' +
+        '(Für einen wirklich scanbaren QR-Code müsste noch eine Maske angewendet ' +
+        'und die Format-Info eingetragen werden.)</small>';
+}
+</script>
+</body>
+</html>
