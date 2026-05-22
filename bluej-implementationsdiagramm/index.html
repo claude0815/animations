@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementationsdiagramm → Java in BlueJ</title>
+    <style>
+        :root {
+            --bg1: #667eea;
+            --bg2: #764ba2;
+            --card: #ffffff;
+            --text: #222;
+            --muted: #666;
+            --accent: #4f46e5;
+            --good: #16a34a;
+            --border: #ddd;
+
+            --c-name: #4f46e5;
+            --c-attr: #2563eb;
+            --c-ctor: #db2777;
+            --c-get:  #16a34a;
+            --c-set:  #f59e0b;
+            --c-meth: #0891b2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--bg1), var(--bg2));
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .wrap { max-width: 1150px; margin: 0 auto; }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-top: 0;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            color: #e9e9ff;
+            text-align: center;
+            margin-top: -10px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 8px;
+        }
+
+        h3 { color: var(--accent); margin-bottom: 6px; }
+
+        p { line-height: 1.55; }
+
+        code {
+            font-family: "Consolas", "Courier New", monospace;
+            background: #f1f1f9;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .note {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        /* ---------- Notations-Tabelle ---------- */
+        table.notation {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table.notation th, table.notation td {
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+        table.notation th { background: #eef2ff; color: var(--accent); }
+        table.notation code { background: #f1f1f9; }
+
+        /* ---------- Stepper ---------- */
+        .stepper-head {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .step-chip {
+            padding: 8px 12px;
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            background: #f9fafb;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .step-chip.active {
+            border-color: var(--accent);
+            background: #eef2ff;
+            color: var(--accent);
+            font-weight: bold;
+        }
+        .step-chip.done { border-color: var(--good); color: var(--good); }
+
+        .split {
+            display: grid;
+            grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* ---------- UML-Diagramm ---------- */
+        .uml {
+            border: 2px solid #333;
+            border-radius: 4px;
+            background: #fffef7;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 14px;
+            overflow: hidden;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        }
+        .uml .compartment { border-top: 2px solid #333; }
+        .uml .compartment:first-child { border-top: none; }
+
+        .uml .cls-name {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 10px;
+            background: #eef2ff;
+            transition: background 0.25s;
+        }
+        .uml .row {
+            padding: 5px 10px;
+            border-bottom: 1px dashed #e3e3e3;
+            transition: background 0.25s;
+        }
+        .uml .row:last-child { border-bottom: none; }
+
+        .uml .vis { font-weight: bold; }
+        .uml .vis.priv { color: #b91c1c; }
+        .uml .vis.pub  { color: #15803d; }
+
+        .uml [data-g].hl {
+            background: #fde68a;
+            box-shadow: inset 4px 0 0 var(--accent);
+        }
+        .uml .cls-name.hl { background: #fde68a; box-shadow: inset 0 4px 0 var(--accent); }
+
+        .uml .compartment-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3px 10px 0 10px;
+        }
+
+        /* ---------- Code ---------- */
+        .code {
+            background: #1e1e2e;
+            color: #e4e4ef;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 13.5px;
+            line-height: 1.5;
+            overflow-x: auto;
+            min-height: 120px;
+        }
+        .code .cb {
+            white-space: pre;
+            display: none;
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: 0 -4px;
+        }
+        .code .cb.visible { display: block; }
+        .code .cb.current { background: rgba(124,108,255,0.20); box-shadow: inset 3px 0 0 #a78bfa; }
+
+        .code .k { color: #c792ea; }   /* keyword */
+        .code .t { color: #82aaff; }   /* type */
+        .code .c { color: #6b7089; font-style: italic; }  /* comment */
+        .code .s { color: #c3e88d; }   /* string */
+
+        /* ---------- Step-Erklärung ---------- */
+        .step-explain {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid var(--accent);
+        }
+        .step-explain h3 { margin-top: 0; }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        button.action {
+            padding: 10px 20px;
+            font-size: 15px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.action:hover { background: #3730a3; }
+        button.action:disabled { background: #bbb; cursor: not-allowed; }
+
+        details {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: #f3f4f6;
+            border-radius: 8px;
+        }
+        details summary { cursor: pointer; font-weight: bold; color: var(--accent); }
+
+        .cheat {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        .cheat .item {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            background: #f9fafb;
+        }
+        .cheat .item h4 { margin: 0 0 6px 0; color: var(--accent); }
+        .cheat .item code { display: block; background: #1e1e2e; color: #e4e4ef; padding: 8px; border-radius: 6px; margin-top: 6px; white-space: pre; font-size: 12.5px; }
+
+        @media (max-width: 820px) {
+            .split { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <h1>Vom Implementationsdiagramm zur Java-Klasse</h1>
+    <p class="subtitle">Schritt für Schritt mit BlueJ — Attribute, Konstruktor, get/set &amp; Methoden</p>
+
+    <!-- ===== Einführung ===== -->
+    <div class="card">
+        <h2>1. Was ist ein Implementationsdiagramm?</h2>
+        <p>Ein <b>Implementationsdiagramm</b> (eine ausführliche UML-Klassenkarte) beschreibt
+            <em>genau</em>, wie eine Klasse aufgebaut ist. Es besteht aus <b>drei Feldern</b>,
+            die übereinander liegen:</p>
+        <ol>
+            <li><b>Klassenname</b> (oben)</li>
+            <li><b>Attribute</b> = die Daten / Eigenschaften (Mitte)</li>
+            <li><b>Methoden</b> = das Verhalten, inkl. Konstruktor, get- und set-Methoden (unten)</li>
+        </ol>
+
+        <h3>Schreibweise (Notation)</h3>
+        <table class="notation">
+            <tr><th>Symbol</th><th>Bedeutung</th><th>Java</th></tr>
+            <tr><td><code>-</code></td><td>private (nur innerhalb der Klasse sichtbar)</td><td><code>private</code></td></tr>
+            <tr><td><code>+</code></td><td>public (von überall sichtbar)</td><td><code>public</code></td></tr>
+            <tr><td><code>name : Typ</code></td><td>Attribut mit Datentyp</td><td><code>private Typ name;</code></td></tr>
+            <tr><td><code>methode(Param) : Typ</code></td><td>Methode mit Parametern und Rückgabetyp</td><td><code>public Typ methode(...) { }</code></td></tr>
+        </table>
+        <div class="note">
+            <b>Faustregel:</b> Attribute sind fast immer <code>private</code> (<code>-</code>),
+            Methoden meist <code>public</code> (<code>+</code>). So sind die Daten geschützt
+            und werden nur über get-/set-Methoden verändert (<i>Datenkapselung</i>).
+        </div>
+    </div>
+
+    <!-- ===== Interaktiver Stepper ===== -->
+    <div class="card">
+        <h2>2. Umsetzung Schritt für Schritt</h2>
+        <p>Beispiel: die Klasse <code>Auto</code>. Klicke dich durch die Schritte – links siehst
+            du das Diagramm (der aktuelle Teil ist markiert), rechts wächst der passende
+            Java-Code mit.</p>
+
+        <div class="stepper-head" id="chips"></div>
+
+        <div class="split">
+            <!-- UML -->
+            <div>
+                <div class="uml" id="uml">
+                    <div class="compartment">
+                        <div class="cls-name" id="uml-name" data-g="name">Auto</div>
+                    </div>
+                    <div class="compartment">
+                        <div class="compartment-label">Attribute</div>
+                        <div class="row" data-g="attr"><span class="vis priv">-</span> kennzeichen : String</div>
+                        <div class="row" data-g="attr"><span class="vis priv">-</span> marke : String</div>
+                        <div class="row" data-g="attr"><span class="vis priv">-</span> geschwindigkeit : int</div>
+                    </div>
+                    <div class="compartment">
+                        <div class="compartment-label">Methoden</div>
+                        <div class="row" data-g="ctor"><span class="vis pub">+</span> Auto(kennzeichen : String, marke : String)</div>
+                        <div class="row" data-g="get"><span class="vis pub">+</span> getKennzeichen() : String</div>
+                        <div class="row" data-g="get"><span class="vis pub">+</span> getGeschwindigkeit() : int</div>
+                        <div class="row" data-g="set"><span class="vis pub">+</span> setKennzeichen(kennzeichen : String) : void</div>
+                        <div class="row" data-g="meth"><span class="vis pub">+</span> beschleunigen(wert : int) : void</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div>
+                <div class="code" id="code"></div>
+            </div>
+        </div>
+
+        <div class="step-explain" id="explain">
+            <h3 id="step-title"></h3>
+            <div id="step-text"></div>
+        </div>
+
+        <div class="nav">
+            <button class="action" id="prev">← Zurück</button>
+            <button class="action" id="next">Weiter →</button>
+        </div>
+    </div>
+
+    <!-- ===== BlueJ-Workflow ===== -->
+    <div class="card">
+        <h2>3. Der Ablauf in BlueJ</h2>
+        <ol>
+            <li><b>Neue Klasse anlegen:</b> Button <i>»Neue Klasse…«</i> → Name <code>Auto</code>
+                eingeben → Typ <i>»Klasse«</i>. BlueJ erzeugt ein Grundgerüst, das du löschst und
+                durch deinen Code ersetzt.</li>
+            <li><b>Code schreiben:</b> Doppelklick auf das Klassen-Rechteck öffnet den Editor.
+                Dort die Attribute, den Konstruktor und die Methoden eintragen.</li>
+            <li><b>Übersetzen (kompilieren):</b> Button <i>»Übersetzen«</i>. Schraffur auf dem
+                Klassensymbol verschwindet, wenn alles fehlerfrei ist. Fehler erscheinen unten.</li>
+            <li><b>Objekt erzeugen:</b> Rechtsklick auf die Klasse → <code>new Auto("B-AB 123", "VW")</code>.
+                Es entsteht eine rote <b>Objektkarte</b> auf der Werkbank (unten).</li>
+            <li><b>Methoden testen:</b> Rechtsklick auf das Objekt → Methode wählen, z. B.
+                <code>beschleunigen(30)</code>, danach <code>getGeschwindigkeit()</code> – das
+                Ergebnis erscheint in einem Fenster.</li>
+        </ol>
+        <div class="note">
+            <b>Inspektor:</b> Doppelklick auf die Objektkarte zeigt alle Attributwerte –
+            ideal, um zu prüfen, ob Konstruktor und set-Methoden korrekt gearbeitet haben.
+        </div>
+    </div>
+
+    <!-- ===== Cheat Sheet ===== -->
+    <div class="card">
+        <h2>4. Spickzettel: Diagramm → Java</h2>
+        <div class="cheat">
+            <div class="item">
+                <h4>Klasse</h4>
+                <div>oberstes Feld</div>
+                <code>public class Auto
+{
+    ...
+}</code>
+            </div>
+            <div class="item">
+                <h4>Attribut</h4>
+                <div><code>- name : Typ</code></div>
+                <code>private Typ name;</code>
+            </div>
+            <div class="item">
+                <h4>Konstruktor</h4>
+                <div>heißt wie die Klasse, kein Rückgabetyp</div>
+                <code>public Auto(String k)
+{
+    this.kennzeichen = k;
+}</code>
+            </div>
+            <div class="item">
+                <h4>get-Methode</h4>
+                <div>liest ein Attribut</div>
+                <code>public String getKennzeichen()
+{
+    return kennzeichen;
+}</code>
+            </div>
+            <div class="item">
+                <h4>set-Methode</h4>
+                <div>ändert ein Attribut</div>
+                <code>public void setKennzeichen(String k)
+{
+    this.kennzeichen = k;
+}</code>
+            </div>
+            <div class="item">
+                <h4>weitere Methode</h4>
+                <div>enthält die Logik</div>
+                <code>public void beschleunigen(int wert)
+{
+    geschwindigkeit += wert;
+}</code>
+            </div>
+        </div>
+
+        <details>
+            <summary>Komplette Klasse Auto auf einen Blick</summary>
+            <div class="code" style="margin-top:10px;" id="fullcode"></div>
+        </details>
+    </div>
+
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+// ============================================================
+// Code-Blöcke (kumulativ aufgebaut)
+// ============================================================
+const blocks = {
+    class: {
+        head: 'public class Auto\n{',
+        tail: null
+    },
+    attr:
+        '    // Attribute (Instanzvariablen)\n' +
+        '    private String kennzeichen;\n' +
+        '    private String marke;\n' +
+        '    private int geschwindigkeit;',
+    ctor:
+        '    // Konstruktor\n' +
+        '    public Auto(String kennzeichen, String marke)\n' +
+        '    {\n' +
+        '        this.kennzeichen = kennzeichen;\n' +
+        '        this.marke = marke;\n' +
+        '        this.geschwindigkeit = 0;\n' +
+        '    }',
+    get:
+        '    // get-Methoden (lesender Zugriff)\n' +
+        '    public String getKennzeichen()\n' +
+        '    {\n' +
+        '        return kennzeichen;\n' +
+        '    }\n\n' +
+        '    public int getGeschwindigkeit()\n' +
+        '    {\n' +
+        '        return geschwindigkeit;\n' +
+        '    }',
+    set:
+        '    // set-Methoden (schreibender Zugriff)\n' +
+        '    public void setKennzeichen(String kennzeichen)\n' +
+        '    {\n' +
+        '        this.kennzeichen = kennzeichen;\n' +
+        '    }',
+    meth:
+        '    // weitere Methode mit Logik\n' +
+        '    public void beschleunigen(int wert)\n' +
+        '    {\n' +
+        '        geschwindigkeit = geschwindigkeit + wert;\n' +
+        '    }'
+};
+
+const CLASS_OPEN  = 'public class Auto\n{';
+const CLASS_CLOSE = '}';
+
+// ============================================================
+// Schritte
+// ============================================================
+const steps = [
+    {
+        chip: '1 · Klasse',
+        title: '1. Die Klasse anlegen',
+        g: 'name',
+        show: [],
+        current: 'class',
+        text:
+            'In BlueJ auf <i>»Neue Klasse…«</i> klicken und den Namen <code>Auto</code> eingeben. ' +
+            'Der Klassenname aus dem obersten Feld des Diagramms wird zu <code>public class Auto</code>. ' +
+            'Die geschweiften Klammern <code>{ }</code> umschließen alles, was zur Klasse gehört.'
+    },
+    {
+        chip: '2 · Attribute',
+        title: '2. Attribute deklarieren',
+        g: 'attr',
+        show: ['attr'],
+        current: 'attr',
+        text:
+            'Das mittlere Feld listet die <b>Attribute</b>. Notation <code>- name : Typ</code>. ' +
+            'Das <code>-</code> bedeutet <code>private</code>, der Typ steht in Java <b>vor</b> dem Namen. ' +
+            'Aus <code>- kennzeichen : String</code> wird also <code>private String kennzeichen;</code>. ' +
+            '<code>private</code> schützt die Daten vor direktem Zugriff von außen.'
+    },
+    {
+        chip: '3 · Konstruktor',
+        title: '3. Den Konstruktor schreiben',
+        g: 'ctor',
+        show: ['attr', 'ctor'],
+        current: 'ctor',
+        text:
+            'Der <b>Konstruktor</b> heißt genau wie die Klasse und hat <b>keinen</b> Rückgabetyp. ' +
+            'Er bekommt Startwerte als Parameter und weist sie den Attributen zu. ' +
+            '<code>this.kennzeichen</code> meint das <b>Attribut</b>, <code>kennzeichen</code> ohne ' +
+            '<code>this</code> den gleichnamigen <b>Parameter</b>. Attribute ohne Startwert ' +
+            '(<code>geschwindigkeit</code>) setzt man sinnvoll – hier auf <code>0</code>.'
+    },
+    {
+        chip: '4 · get',
+        title: '4. get-Methoden (Accessoren)',
+        g: 'get',
+        show: ['attr', 'ctor', 'get'],
+        current: 'get',
+        text:
+            '<b>get-Methoden</b> geben den Wert eines Attributs zurück, damit man ihn von außen ' +
+            '<b>lesen</b> kann. Der Rückgabetyp ist der Typ des Attributs, es gibt keine Parameter, ' +
+            'und der Rumpf lautet <code>return attribut;</code>. ' +
+            'Diagramm: <code>+ getGeschwindigkeit() : int</code> → das <code>+</code> ist <code>public</code>.'
+    },
+    {
+        chip: '5 · set',
+        title: '5. set-Methoden (Mutatoren)',
+        g: 'set',
+        show: ['attr', 'ctor', 'get', 'set'],
+        current: 'set',
+        text:
+            '<b>set-Methoden</b> <b>ändern</b> ein Attribut. Rückgabetyp <code>void</code> (nichts ' +
+            'zurück), ein Parameter mit dem neuen Wert. Auch hier trennt <code>this</code> Attribut ' +
+            'und Parameter. Nicht jedes Attribut braucht ein set – manche sollen unveränderlich bleiben.'
+    },
+    {
+        chip: '6 · Methode',
+        title: '6. Weitere Methoden (Verhalten)',
+        g: 'meth',
+        show: ['attr', 'ctor', 'get', 'set', 'meth'],
+        current: 'meth',
+        text:
+            'Neben get/set enthält eine Klasse Methoden mit der eigentlichen <b>Logik</b>. ' +
+            '<code>beschleunigen(int wert)</code> erhöht die Geschwindigkeit um <code>wert</code>. ' +
+            'Rückgabetyp <code>void</code>, weil nichts zurückgegeben wird.'
+    },
+    {
+        chip: '7 · Testen',
+        title: '7. In BlueJ testen',
+        g: null,
+        show: ['attr', 'ctor', 'get', 'set', 'meth'],
+        current: null,
+        text:
+            'Klasse <b>übersetzen</b>. Dann Rechtsklick auf die Klasse → ' +
+            '<code>new Auto("B-AB 123", "VW")</code> erzeugt ein Objekt (rote Karte auf der ' +
+            'Werkbank). Rechtsklick auf das Objekt ruft Methoden auf: erst ' +
+            '<code>beschleunigen(30)</code>, dann <code>getGeschwindigkeit()</code> zeigt <code>30</code>. ' +
+            'Doppelklick auf die Objektkarte öffnet den <b>Inspektor</b> mit allen Attributwerten.'
+    }
+];
+
+// ============================================================
+// Mini-Syntaxhighlighter (für dieses feste Beispiel ausreichend)
+// ============================================================
+function highlight(code) {
+    let h = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    // Kommentare zuerst (ganze Zeile)
+    h = h.replace(/(\/\/[^\n]*)/g, '<span class="c">$1</span>');
+    // Schlüsselwörter
+    h = h.replace(/\b(public|private|protected|class|void|return|this|new)\b/g, '<span class="k">$1</span>');
+    // Typen
+    h = h.replace(/\b(String|int|double|boolean|char)\b/g, '<span class="t">$1</span>');
+    return h;
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+function renderCode(step) {
+    const el = $("code");
+    el.innerHTML = "";
+
+    const add = (key, text, isCurrent) => {
+        const div = document.createElement("div");
+        div.className = "cb visible" + (isCurrent ? " current" : "");
+        div.innerHTML = highlight(text);
+        el.appendChild(div);
+    };
+
+    // Klassenkopf (immer sichtbar)
+    add('class', CLASS_OPEN, step.current === 'class');
+
+    // Innere Blöcke
+    const inner = ['attr', 'ctor', 'get', 'set', 'meth'];
+    inner.forEach((key) => {
+        if (step.show.includes(key)) {
+            add(key, '\n' + blocks[key], step.current === key);
+        }
+    });
+
+    // Klassenende
+    add('close', CLASS_CLOSE, false);
+}
+
+function renderUML(step) {
+    document.querySelectorAll('#uml [data-g]').forEach(elm => {
+        elm.classList.toggle('hl', step.g !== null && elm.dataset.g === step.g);
+    });
+}
+
+function renderChips(activeIndex) {
+    const el = $("chips");
+    el.innerHTML = "";
+    steps.forEach((s, i) => {
+        const c = document.createElement("div");
+        c.className = "step-chip" + (i === activeIndex ? " active" : (i < activeIndex ? " done" : ""));
+        c.textContent = s.chip;
+        c.addEventListener("click", () => goTo(i));
+        el.appendChild(c);
+    });
+}
+
+let cur = 0;
+
+function goTo(i) {
+    cur = Math.max(0, Math.min(steps.length - 1, i));
+    const step = steps[cur];
+    renderChips(cur);
+    renderUML(step);
+    renderCode(step);
+    $("step-title").innerHTML = step.title;
+    $("step-text").innerHTML  = step.text;
+    $("prev").disabled = (cur === 0);
+    $("next").disabled = (cur === steps.length - 1);
+}
+
+$("prev").addEventListener("click", () => goTo(cur - 1));
+$("next").addEventListener("click", () => goTo(cur + 1));
+
+// Vollständiger Code im Spickzettel
+(function renderFull() {
+    const full = [CLASS_OPEN,
+        '\n' + blocks.attr,
+        '\n' + blocks.ctor,
+        '\n' + blocks.get,
+        '\n' + blocks.set,
+        '\n' + blocks.meth,
+        '\n' + CLASS_CLOSE].join('\n');
+    const div = document.createElement("div");
+    div.className = "cb visible";
+    div.innerHTML = highlight(full);
+    $("fullcode").appendChild(div);
+})();
+
+// Start
+goTo(0);
+</script>
+</body>
+</html>
