@@ -572,17 +572,25 @@ const steps = [
 // Mini-Syntaxhighlighter (für dieses feste Beispiel ausreichend)
 // ============================================================
 function highlight(code) {
-    let h = code
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    // Kommentare zuerst (ganze Zeile)
-    h = h.replace(/(\/\/[^\n]*)/g, '<span class="c">$1</span>');
-    // Schlüsselwörter
-    h = h.replace(/\b(public|private|protected|class|void|return|this|new)\b/g, '<span class="k">$1</span>');
-    // Typen
-    h = h.replace(/\b(String|int|double|boolean|char)\b/g, '<span class="t">$1</span>');
-    return h;
+    // Zeilenweise, damit die Schlüsselwort-Ersetzung nicht in bereits
+    // eingefügte HTML-Attribute (z. B. class="c") hineingreift.
+    return code.split('\n').map(line => {
+        let h = line
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Kommentarzeilen komplett umschließen und nicht weiter anfassen
+        if (h.trimStart().startsWith('//')) {
+            return '<span class="c">' + h + '</span>';
+        }
+
+        // Schlüsselwörter
+        h = h.replace(/\b(public|private|protected|class|void|return|this|new)\b/g, '<span class="k">$1</span>');
+        // Typen
+        h = h.replace(/\b(String|int|double|boolean|char)\b/g, '<span class="t">$1</span>');
+        return h;
+    }).join('\n');
 }
 
 // ============================================================
