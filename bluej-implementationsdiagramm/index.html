@@ -256,8 +256,30 @@
         .cheat .item h4 { margin: 0 0 6px 0; color: var(--accent); }
         .cheat .item code { display: block; background: #1e1e2e; color: #e4e4ef; padding: 8px; border-radius: 6px; margin-top: 6px; white-space: pre; font-size: 12.5px; }
 
+        /* ---------- Assoziation ---------- */
+        .assoc {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 14px;
+            align-items: center;
+            margin: 18px 0;
+        }
+        .uml.mini { font-size: 13px; }
+        .uml .row.sep {
+            border-top: 2px solid #333;
+            padding: 0;
+            height: 0;
+            border-bottom: none;
+        }
+        .assoc-arrow {
+            width: 220px;
+            height: 90px;
+        }
+
         @media (max-width: 820px) {
             .split { grid-template-columns: 1fr; }
+            .assoc { grid-template-columns: 1fr; }
+            .assoc-arrow { transform: rotate(90deg); height: 60px; }
         }
     </style>
 </head>
@@ -367,9 +389,125 @@
         </div>
     </div>
 
+    <!-- ===== Beziehungen zwischen Klassen ===== -->
+    <div class="card">
+        <h2>4. Beziehungen zwischen Klassen</h2>
+        <p>Eine Klasse enthält oft nicht nur einfache Datentypen wie <code>int</code> oder
+            <code>String</code>, sondern auch <b>Objekte anderer Klassen</b>. Im
+            Implementationsdiagramm wird das durch einen <b>Pfeil</b> dargestellt: er zeigt
+            von der Klasse, die das fremde Objekt <em>kennt</em>, zu der Klasse, deren Objekt
+            verwendet wird.</p>
+
+        <h3>So liest man den Pfeil</h3>
+        <ul>
+            <li><b>Pfeilrichtung:</b> <code>Person ──► Auto</code> heißt „eine Person kennt
+                ein Auto" – nicht umgekehrt.</li>
+            <li><b>Beschriftung (Rolle):</b> z. B. <code>besitzt</code> oder <code>fährt</code>.</li>
+            <li><b>Multiplizität</b> an den Enden: <code>1</code> = genau eines,
+                <code>0..1</code> = höchstens eines, <code>*</code> = beliebig viele.</li>
+        </ul>
+
+        <!-- Visualisierung mit Pfeil -->
+        <div class="assoc">
+            <!-- Linke Box: Person -->
+            <div class="uml mini">
+                <div class="cls-name">Person</div>
+                <div class="row"><span class="vis priv">-</span> name : String</div>
+                <div class="row"><span class="vis priv">-</span> auto : Auto</div>
+                <div class="row sep"></div>
+                <div class="row"><span class="vis pub">+</span> Person(name : String, auto : Auto)</div>
+                <div class="row"><span class="vis pub">+</span> getAuto() : Auto</div>
+                <div class="row"><span class="vis pub">+</span> fahre(wert : int) : void</div>
+            </div>
+
+            <!-- Pfeil -->
+            <svg class="assoc-arrow" viewBox="0 0 220 90" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10"
+                            refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#4f46e5"></polygon>
+                    </marker>
+                </defs>
+                <text x="110" y="22" text-anchor="middle"
+                      font-family="Segoe UI, Arial" font-size="14"
+                      fill="#4f46e5" font-weight="bold">besitzt ▶</text>
+                <line x1="10" y1="50" x2="205" y2="50"
+                      stroke="#4f46e5" stroke-width="3"
+                      marker-end="url(#arrowhead)" />
+                <text x="14" y="72" font-family="Consolas, monospace"
+                      font-size="14" fill="#444">1</text>
+                <text x="200" y="72" text-anchor="end"
+                      font-family="Consolas, monospace" font-size="14" fill="#444">1</text>
+            </svg>
+
+            <!-- Rechte Box: Auto (kurz) -->
+            <div class="uml mini">
+                <div class="cls-name">Auto</div>
+                <div class="row"><span class="vis priv">-</span> kennzeichen : String</div>
+                <div class="row"><span class="vis priv">-</span> geschwindigkeit : int</div>
+                <div class="row sep"></div>
+                <div class="row"><span class="vis pub">+</span> Auto(kennzeichen : String, marke : String)</div>
+                <div class="row"><span class="vis pub">+</span> beschleunigen(wert : int) : void</div>
+                <div class="row"><span class="vis pub">+</span> getGeschwindigkeit() : int</div>
+            </div>
+        </div>
+
+        <h3>Umsetzung in Java</h3>
+        <p>Aus dem Pfeil wird ein <b>Attribut, dessen Datentyp die andere Klasse ist</b> –
+            also <code>private Auto auto;</code>. Der Konstruktor bekommt das fertige
+            Auto-Objekt als Parameter übergeben.</p>
+
+        <div class="code" id="assoc-code"></div>
+
+        <h3>Was passiert hier?</h3>
+        <ul>
+            <li><b>Attribut</b> <code>private Auto auto;</code> – der Datentyp ist die andere
+                Klasse. Die Person speichert eine <em>Referenz</em> auf ein Auto-Objekt.</li>
+            <li><b>Konstruktor</b> nimmt das Auto-Objekt als Parameter entgegen. Die Person
+                erzeugt das Auto also nicht selbst, sondern bekommt es übergeben.</li>
+            <li><b>Methodenaufruf mit Punktnotation:</b> <code>auto.beschleunigen(wert)</code>
+                ruft eine Methode <em>auf dem fremden Objekt</em> auf.</li>
+            <li><b>Rückgabe von Objekten:</b> <code>getAuto()</code> hat den Rückgabetyp
+                <code>Auto</code> – der Aufrufer bekommt das eine Auto-Objekt zurück.</li>
+        </ul>
+
+        <h3>In BlueJ ausprobieren</h3>
+        <ol>
+            <li>Erst ein <code>Auto</code>-Objekt anlegen: Rechtsklick auf die Klasse
+                <code>Auto</code> → <code>new Auto("B-AB 123", "VW")</code>. Es erscheint auf
+                der Werkbank, z. B. als <code>auto1</code>.</li>
+            <li>Dann ein <code>Person</code>-Objekt anlegen: Rechtsklick auf <code>Person</code>
+                → <code>new Person("Anna", auto1)</code>. Im Parameter-Fenster gibst du
+                <code>auto1</code> ein – BlueJ akzeptiert das Objekt von der Werkbank als
+                Parameter.</li>
+            <li>Methode aufrufen: Rechtsklick auf <code>person1</code> → <code>fahre(50)</code>.
+                Intern führt die Person <code>auto1.beschleunigen(50)</code> aus.</li>
+            <li>Kontrolle: Rechtsklick auf <code>auto1</code> → <code>getGeschwindigkeit()</code>
+                liefert <code>50</code>. Beide Objekte zeigen also dasselbe Auto.</li>
+        </ol>
+
+        <div class="note">
+            <b>Wichtig:</b> Es gibt nur <em>ein</em> Auto-Objekt. Die Person <em>kennt</em>
+            das Auto, sie kopiert es nicht. Änderungen am Auto sind sofort auch sichtbar,
+            wenn man über die Person darauf zugreift.
+        </div>
+
+        <details>
+            <summary>Weitere Multiplizitäten</summary>
+            <p><b><code>1</code></b> – die Person hat genau ein Auto. Das Attribut ist immer
+                gesetzt.</p>
+            <p><b><code>0..1</code></b> – die Person hat höchstens ein Auto. Das Attribut darf
+                <code>null</code> sein. Vor dem Methodenaufruf prüfen:
+                <code>if (auto != null) { … }</code>.</p>
+            <p><b><code>*</code> oder <code>0..*</code></b> – die Person hat beliebig viele
+                Autos. Statt eines einzelnen Attributs verwendet man dann eine Liste, z. B.
+                <code>private ArrayList&lt;Auto&gt; autos;</code>.</p>
+        </details>
+    </div>
+
     <!-- ===== Cheat Sheet ===== -->
     <div class="card">
-        <h2>4. Spickzettel: Diagramm → Java</h2>
+        <h2>5. Spickzettel: Diagramm → Java</h2>
         <div class="cheat">
             <div class="item">
                 <h4>Klasse</h4>
@@ -414,6 +552,16 @@
                 <code>public void beschleunigen(int wert)
 {
     geschwindigkeit += wert;
+}</code>
+            </div>
+            <div class="item">
+                <h4>Beziehung (Pfeil)</h4>
+                <div><code>Person ──► Auto</code></div>
+                <code>private Auto auto;
+
+public Person(... , Auto auto)
+{
+    this.auto = auto;
 }</code>
             </div>
         </div>
@@ -656,6 +804,41 @@ function goTo(i) {
 
 $("prev").addEventListener("click", () => goTo(cur - 1));
 $("next").addEventListener("click", () => goTo(cur + 1));
+
+// Person-Klasse (Beziehung zu Auto)
+(function renderAssocCode() {
+    const code =
+        'public class Person\n' +
+        '{\n' +
+        '    // Attribute\n' +
+        '    private String name;\n' +
+        '    // Beziehung zur Klasse Auto\n' +
+        '    private Auto auto;\n' +
+        '\n' +
+        '    // Konstruktor: bekommt das Auto-Objekt uebergeben\n' +
+        '    public Person(String name, Auto auto)\n' +
+        '    {\n' +
+        '        this.name = name;\n' +
+        '        this.auto = auto;\n' +
+        '    }\n' +
+        '\n' +
+        '    // gibt das zugeordnete Auto-Objekt zurueck\n' +
+        '    public Auto getAuto()\n' +
+        '    {\n' +
+        '        return auto;\n' +
+        '    }\n' +
+        '\n' +
+        '    // ruft eine Methode auf dem Auto-Objekt auf\n' +
+        '    public void fahre(int wert)\n' +
+        '    {\n' +
+        '        auto.beschleunigen(wert);\n' +
+        '    }\n' +
+        '}';
+    const div = document.createElement("div");
+    div.className = "cb visible";
+    div.innerHTML = highlight(code);
+    $("assoc-code").appendChild(div);
+})();
 
 // Vollständiger Code im Spickzettel
 (function renderFull() {
